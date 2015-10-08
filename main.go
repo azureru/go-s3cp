@@ -20,6 +20,9 @@ var (
 	bucket   string
 	destPath string
 
+	// storage class
+	storageClass string
+
 	// true when source is a folder (so we need to walk on it, false when not)
 	isSourceIsFolder bool
 
@@ -48,6 +51,10 @@ func main() {
 		cli.BoolFlag{
 			Name:  "public, p",
 			Usage: "upload as Public ACL",
+		},
+		cli.StringFlag{
+			Name:  "storage, s",
+			Usage: "specify the storage class (STANDARD, REDUCED_REDUNDANCY, STANDARD_IA)",
 		},
 	}
 
@@ -83,6 +90,12 @@ func main() {
 		}
 		firstPath = args[0]
 		secondPath = args[1]
+
+		storageClass = "STANDARD"
+		if c.String("storage") != "" {
+			storageClass = c.String("storage")
+		}
+		fmt.Println("Storage Class: " + storageClass)
 
 		isVerbose = c.Bool("verbose")
 		isPublic = c.Bool("public")
@@ -158,10 +171,11 @@ func copyLocalToRemote() {
 		}
 
 		params := &s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(targetKey),
-			ACL:    acl,
-			Body:   file,
+			Bucket:       aws.String(bucket),
+			Key:          aws.String(targetKey),
+			ACL:          acl,
+			Body:         file,
+			StorageClass: aws.String(storageClass),
 		}
 		result, err := s3client.PutObject(params)
 		if err != nil {
