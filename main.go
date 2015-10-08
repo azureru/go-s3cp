@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	//"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 var (
@@ -88,7 +87,6 @@ func main() {
 		isVerbose = c.Bool("verbose")
 		isPublic = c.Bool("public")
 		copyLocalToRemote()
-
 	}
 
 	app.Run(os.Args)
@@ -135,7 +133,6 @@ func copyLocalToRemote() {
 	}()
 
 	// For each file found walking upload it to S3.
-	//uploader := s3manager.NewUploader(nil)
 	for path := range walker {
 		rel, err := filepath.Rel(firstPath, path)
 		if err != nil {
@@ -154,6 +151,7 @@ func copyLocalToRemote() {
 		}
 		fmt.Println(" ..." + path + " to " + targetKey)
 
+		// check permission
 		acl := aws.String("authenticated-read")
 		if isPublic {
 			acl = aws.String("public-read")
