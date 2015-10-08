@@ -20,8 +20,11 @@ var (
 	bucket   string
 	destPath string
 
-	// storage class
+	// storage class to be used (default STANDARD)
 	storageClass string
+
+	// the permission of the uploaded file (default authenticated-read)
+	permissionName string
 
 	// true when source is a folder (so we need to walk on it, false when not)
 	isSourceIsFolder bool
@@ -35,6 +38,9 @@ var (
 	// verbose mode
 	isVerbose bool
 )
+
+var predefinedPermissions = []string{"private", "public-read", "public-read-write", "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"}
+var predefinedRegions = []string{"us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "sa-east-1"}
 
 func main() {
 	app := cli.NewApp()
@@ -50,11 +56,15 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:  "public, p",
-			Usage: "upload as Public ACL",
+			Usage: "upload as Public ACL, this will ignore setting on permission",
 		},
 		cli.StringFlag{
 			Name:  "storage, s",
-			Usage: "specify the storage class (STANDARD, REDUCED_REDUNDANCY, STANDARD_IA)",
+			Usage: "specify the storage class (STANDARD | REDUCED_REDUNDANCY | STANDARD_IA)",
+		},
+		cli.StringFlag{
+			Name:  "permission, perm",
+			Usage: "specify the Permission of the file (private | public-read | public-read-write | authenticated-read | bucket-owner-read | bucket-owner-full-control)",
 		},
 	}
 
@@ -66,15 +76,19 @@ func main() {
 			Action: func(c *cli.Context) {
 				// since the SDK does not provide ways to enumerate this -
 				fmt.Println("List of Regions:")
-				fmt.Println("   us-east-1")
-				fmt.Println("   us-west-1")
-				fmt.Println("   us-west-2")
-				fmt.Println("   eu-west-1")
-				fmt.Println("   eu-central-1")
-				fmt.Println("   ap-southeast-1")
-				fmt.Println("   ap-southeast-2")
-				fmt.Println("   ap-northeast-1")
-				fmt.Println("   sa-east-1")
+				for index := 0; index < len(predefinedRegions); index++ {
+					fmt.Printf("   %s\n", predefinedRegions[index])
+				}
+			},
+		},
+		{
+			Name:  "permission",
+			Usage: "List all Permissions",
+			Action: func(c *cli.Context) {
+				fmt.Println("List of Permissions:")
+				for index := 0; index < len(predefinedPermissions); index++ {
+					fmt.Printf("   %s\n", predefinedPermissions[index])
+				}
 			},
 		},
 	}
@@ -91,6 +105,7 @@ func main() {
 		firstPath = args[0]
 		secondPath = args[1]
 
+		// storage class
 		storageClass = "STANDARD"
 		if c.String("storage") != "" {
 			storageClass = c.String("storage")
@@ -98,7 +113,21 @@ func main() {
 		fmt.Println("Storage Class: " + storageClass)
 
 		isVerbose = c.Bool("verbose")
+
+		// permission
+		permissionName = "private"
+		if permissionName != "" {
+			permissionName = c.String("permission")
+		}
 		isPublic = c.Bool("public")
+		if isPublic {
+			permissionName = "public-read"
+		}
+		if !stringInSlice(permissionName, predefinedPermissions) {
+			log.Fatalln("Invalid Permission Name " + permissionName)
+		}
+		fmt.Println("Permission: " + permissionName)
+
 		copyLocalToRemote()
 	}
 
@@ -118,6 +147,11 @@ func copyLocalToRemote() {
 	region = args[0]
 	bucket = args[1]
 	destPath = args[2]
+
+	// check for region
+	if !stringInSlice(region, predefinedRegions) {
+		log.Fatalln("Invalid Region Name " + region)
+	}
 
 	// new aws s3 client
 	config := aws.NewConfig().WithRegion(region)
@@ -164,16 +198,10 @@ func copyLocalToRemote() {
 		}
 		fmt.Println(" ..." + path + " to " + targetKey)
 
-		// check permission
-		acl := aws.String("authenticated-read")
-		if isPublic {
-			acl = aws.String("public-read")
-		}
-
 		params := &s3.PutObjectInput{
 			Bucket:       aws.String(bucket),
 			Key:          aws.String(targetKey),
-			ACL:          acl,
+			ACL:          aws.String(permissionName),
 			Body:         file,
 			StorageClass: aws.String(storageClass),
 		}
@@ -200,6 +228,15 @@ func (f fileWalk) Walk(path string, info os.FileInfo, err error) error {
 func isDir(path string) bool {
 	if info, err := os.Stat(path); err == nil && info.IsDir() {
 		return true
+	}
+	return false
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
 	}
 	return false
 }
