@@ -116,7 +116,7 @@ func main() {
 
 		// permission
 		permissionName = "private"
-		if permissionName != "" {
+		if c.String("permission") != "" {
 			permissionName = c.String("permission")
 		}
 		isPublic = c.Bool("public")
