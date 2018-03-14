@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -166,7 +167,8 @@ func copyRemoteToLocal() {
 	filename := secondPath
 	isTargetIsFolder = isDir(secondPath)
 	if isTargetIsFolder {
-		filename = secondPath + ""
+		file := path.Base(sourcePath)
+		filename = secondPath + file
 	}
 
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String(region)}))
@@ -184,6 +186,8 @@ func copyRemoteToLocal() {
 		Key:    aws.String(sourcePath),
 	})
 	if err != nil {
+		// fail - dispose garbage
+		os.Remove(filename)
 		log.Fatalln("failed to download file, %v", err)
 	}
 	fmt.Printf("file downloaded, %d bytes\n", n)
