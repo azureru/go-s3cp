@@ -2,19 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/codegangsta/cli"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/codegangsta/cli"
 )
 
 var (
 	firstPath  string
 	secondPath string
 	prefix     string
+	sourcePath string
 
 	region   string
 	bucket   string
@@ -128,12 +132,64 @@ func main() {
 		}
 		fmt.Println("Permission: " + permissionName)
 
-		copyLocalToRemote()
+		if strings.Contains(firstPath, ":") {
+			copyRemoteToLocal()
+		} else {
+			copyLocalToRemote()
+		}
 	}
 
 	app.Run(os.Args)
 }
 
+func copyRemoteToLocal() {
+	// parse target path
+	args := strings.Split(firstPath, ":")
+	isSourceIsFolder = strings.HasSuffix(firstPath, "/")
+	// region:bucket:path
+	if len(args) < 3 {
+		log.Fatalln("S3 path must be in format region:bucketname:targetpath")
+	}
+	region = args[0]
+	bucket = args[1]
+	sourcePath = args[2]
+
+	if isSourceIsFolder {
+		log.Fatalln("Remote source must be a file")
+	}
+
+	// check for region
+	if !stringInSlice(region, predefinedRegions) {
+		log.Fatalln("Invalid Region Name " + region)
+	}
+
+	filename := secondPath
+	isTargetIsFolder = isDir(secondPath)
+	if isTargetIsFolder {
+		filename = secondPath + ""
+	}
+
+	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String(region)}))
+	downloader := s3manager.NewDownloader(sess)
+
+	// Create a file to write the S3 Object contents to.
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Fatalln("failed to create file %q, %v", filename, err)
+	}
+	defer f.Close()
+	// Write the contents of S3 Object to the file
+	n, err := downloader.Download(f, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(sourcePath),
+	})
+	if err != nil {
+		log.Fatalln("failed to download file, %v", err)
+	}
+	fmt.Printf("file downloaded, %d bytes\n", n)
+}
+
+// copy from local file to remove destination
 func copyLocalToRemote() {
 	isSourceIsFolder = isDir(firstPath)
 
@@ -152,13 +208,6 @@ func copyLocalToRemote() {
 	if !stringInSlice(region, predefinedRegions) {
 		log.Fatalln("Invalid Region Name " + region)
 	}
-
-	// new aws s3 client
-	config := aws.NewConfig().WithRegion(region)
-	if isVerbose {
-		config = config.WithLogLevel(aws.LogDebug)
-	}
-	s3client := s3.New(config)
 
 	// if source is folder, the target must be a folder
 	if isSourceIsFolder && !isTargetIsFolder {
@@ -179,6 +228,9 @@ func copyLocalToRemote() {
 		close(walker)
 	}()
 
+	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String(region)}))
+	uploader := s3manager.NewUploader(sess)
+
 	// For each file found walking upload it to S3.
 	for path := range walker {
 		rel, err := filepath.Rel(firstPath, path)
@@ -198,18 +250,17 @@ func copyLocalToRemote() {
 		}
 		fmt.Println(" ..." + path + " to " + targetKey)
 
-		params := &s3.PutObjectInput{
+		result, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket:       aws.String(bucket),
 			Key:          aws.String(targetKey),
 			ACL:          aws.String(permissionName),
 			Body:         file,
 			StorageClass: aws.String(storageClass),
-		}
-		result, err := s3client.PutObject(params)
+		})
 		if err != nil {
 			log.Fatalln("Failed to upload", path, err)
 		}
-		fmt.Println("    Uploaded with ETag: ", result.ETag)
+		fmt.Println("    Uploaded: ", result.Location)
 	}
 }
 

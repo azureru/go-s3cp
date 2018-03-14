@@ -26,3 +26,8 @@ _testmain.go
 # compiled binaries
 go-s3cp
 go-s3cp_*
+
+# tarball
+*.tar.gz
+
+vendor/*
