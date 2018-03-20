@@ -24,8 +24,8 @@ _testmain.go
 *.prof
 
 # compiled binaries
-go-s3cp
-go-s3cp_*
+goccp
+goccp_*
 
 # tarball
 *.tar.gz

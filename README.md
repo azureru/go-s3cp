@@ -4,7 +4,7 @@ An attempt to learn about `golang` by creating a tool to copy file `from` and `t
 
 The reason this exists is to have no-dependency binary that can easily copy-pasted inside containers or your own server.
 
-An UPX-ed golang binary should be small enough for the purpose
+An UPX-ed golang binary should be small enough for the purpose (I add upx and gox to the build process)
 
 ## AWS Credentials
 The credential will use Amazon SDK style of storing credential (use aws on your home, on your ENV var, or on your EC2 binded role - if you run it on EC2) - More info here `https://github.com/aws/aws-sdk-go/wiki/Getting-Started-Credentials`

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/azureru/go-s3cp/utils"
+	"github.com/azureru/goccp/utils"
 	"github.com/codegangsta/cli"
 )
 
@@ -67,8 +67,9 @@ func main() {
 		if len(args) < 2 {
 			fmt.Println("You need to put [from] and [to] path.")
 			fmt.Println("EXAMPLE:")
-			fmt.Println("   goccp ./file regionname:bucket:path/path/filename")
+			fmt.Println("   goccp ./file s3:regionname:bucket:path/path/filename")
 			fmt.Println("   goccp ./file gs://bucket/path/filename")
+			fmt.Println("   goccp gs://bucket/path/filename ./")
 			return
 		}
 		firstPath = args[0]
