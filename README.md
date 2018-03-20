@@ -1,4 +1,4 @@
-# go-s3cp
+# goccp (go cloud copy)
 
 An attempt to learn about `golang` by creating a tool to copy file `from` and `to` AWS S3 and Google GCS
 
@@ -14,16 +14,17 @@ This also will use Google SDK style of credentials - more info here
 `https://cloud.google.com/docs/authentication/production`
 
 ```
-    go-s3cp help
+    # upload
+    goccp ./file.txt s3:us-east-1:bucketname:/file.txt
+    goccp -vv -perm public-read ./test ap-southeast-1:bucketname:/targetpath/
 
-    go-s3cp ./file.txt us-east-1:bucketname:/file.txt
-
-    go-s3cp -vv -perm public-read ./test ap-southeast-1:bucketname:/targetpath/
+    # download
+    goccp gs://bucket/path/file.zip ./
+    goccp s3:us-east-1:bucket:/file.zip ./
 ```
 
 ## TODO
 - Refactor the provider to an interface :P (so we can support digical ocean's for example, or Webdav or FTP or other :|)
-- Refactor the directory walker to an interface so it does not copy paste 
 
 - For now copy from remote source cannot walk through nested-folders
-  since that will incur additional API calls for listing
+  since that will incur additional API calls for listing the files
