@@ -23,7 +23,7 @@ This also will use Google SDK style of credentials - more info here
 
 ## TODO
 - Refactor the provider to an interface :P (so we can support digical ocean's for example, or Webdav or FTP or other :|)
-- Refactor the directory walker to an interface
+- Refactor the directory walker to an interface so it does not copy paste 
 
 - For now copy from remote source cannot walk through nested-folders
   since that will incur additional API calls for listing

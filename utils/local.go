@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -42,6 +44,27 @@ func (f FileWalk) Walk(path string, info os.FileInfo, err error) error {
 		f <- path
 	}
 	return nil
+}
+
+// IterateUpload will walk the files in the walker and call callback to upload it one by one
+func (f FileWalk) IterateUpload(localSource string, callback func(path, rel string) error) {
+	// walk the files
+	walker := make(FileWalk)
+	go func() {
+		// Gather the files to upload by walking the path recursively.
+		if err := filepath.Walk(localSource, walker.Walk); err != nil {
+			log.Fatalln("Error: ", fmt.Sprintf("%v", err))
+		}
+		close(walker)
+	}()
+	// For each file found on the recursive
+	for path := range walker {
+		rel, err := filepath.Rel(localSource, path)
+		if err != nil {
+			log.Fatalln("Unable to get relative path:", path, err)
+		}
+		callback(path, rel)
+	}
 }
 
 // StringInSlice Return true if a is in the list slice

@@ -94,23 +94,11 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 
 	// walk the files
 	walker := make(FileWalk)
-	go func() {
-		// Gather the files to upload by walking the path recursively.
-		if err := filepath.Walk(localSource, walker.Walk); err != nil {
-			log.Fatalln("Error: ", fmt.Sprintf("%v", err))
-		}
-		close(walker)
-	}()
-	// For each file found on the recursive
-	for path := range walker {
-		rel, err := filepath.Rel(localSource, path)
-		if err != nil {
-			log.Fatalln("Unable to get relative path:", path, err)
-		}
+	walker.IterateUpload(localSource, func(path, rel string) error {
 		file, err := os.Open(path)
 		if err != nil {
 			log.Println("Failed opening file", path, err)
-			continue
+			return nil
 		}
 		defer file.Close()
 
@@ -125,19 +113,15 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 		fmt.Println(" ..." + path + " to " + targetKey)
 
 		wc := bucketGcs.Object(targetKey).NewWriter(GCSCredentialSession)
-
 		wc.CacheControl = "max-age=86400"
 		wc.StorageClass = storageClass
 		wc.ACL = acl
-
-		// writing
 		slurp, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
 		}
 		buffer := slurp[0:512]
 		wc.ContentType = http.DetectContentType(buffer)
-
 		if _, err := wc.Write(slurp); err != nil {
 			return err
 		}
@@ -145,7 +129,9 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 			return err
 		}
 		slurp = nil
-	}
+
+		return nil
+	})
 
 	return nil
 }
@@ -214,6 +200,6 @@ func normalizePermission(pm string) []storage.ACLRule {
 		return []storage.ACLRule{{Entity: storage.AllAuthenticatedUsers, Role: storage.RoleWriter}}
 	}
 
-	// default
+	// default is authenticated-read
 	return []storage.ACLRule{{Entity: storage.AllAuthenticatedUsers, Role: storage.RoleReader}}
 }

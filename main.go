@@ -35,41 +35,31 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:  "public, p",
-			Usage: "upload as Public ACL, this will ignore setting on permission",
+			Usage: "upload as Public ACL, this will ignore setting on -permission flag",
 		},
 		cli.StringFlag{
 			Name:  "storage, s",
-			Usage: "specify the storage class (STANDARD | REDUCED_REDUNDANCY | STANDARD_IA)",
+			Usage: "specify the storage class",
 		},
 		cli.StringFlag{
 			Name:  "permission, perm",
-			Usage: "specify the Permission of the file (private | public-read | public-read-write | authenticated-read | bucket-owner-read | bucket-owner-full-control)",
+			Usage: "specify the Permission of the file",
 		},
 	}
 
 	app.Commands = []cli.Command{
-	// {
-	// 	Name:    "region",
-	// 	Aliases: []string{"reg"},
-	// 	Usage:   "List all Amazon Regions (as a reminder :P)",
-	// 	Action: func(c *cli.Context) {
-	// 		// since the SDK does not provide ways to enumerate this -
-	// 		fmt.Println("List of Regions:")
-	// 		for index := 0; index < len(predefinedRegions); index++ {
-	// 			fmt.Printf("   %s\n", predefinedRegions[index])
-	// 		}
-	// 	},
-	// },
-	// {
-	// 	Name:  "permission",
-	// 	Usage: "List all Permissions",
-	// 	Action: func(c *cli.Context) {
-	// 		fmt.Println("List of Permissions:")
-	// 		for index := 0; index < len(predefinedPermissions); index++ {
-	// 			fmt.Printf("   %s\n", predefinedPermissions[index])
-	// 		}
-	// 	},
-	// },
+		{
+			Name:    "region",
+			Aliases: []string{"reg"},
+			Usage:   "List all Amazon Regions (as a reminder :P)",
+			Action: func(c *cli.Context) {
+				// since the SDK does not provide ways to enumerate this -
+				fmt.Println("List of Regions:")
+				for index := 0; index < len(utils.S3Regions); index++ {
+					fmt.Printf("   %s\n", utils.S3Regions[index])
+				}
+			},
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -105,19 +95,16 @@ func main() {
 			utils.GlobalParamArg.PermissionName = "public-read"
 		}
 
-		if !utils.StringInSlice(utils.GlobalParamArg.PermissionName, utils.GlobalPermissions) {
-			log.Fatalln("Invalid Permission Name " + permissionName)
-		}
-		fmt.Println("Permission: " + permissionName)
-
 		// when the first path is s3:blah:blah or gs://blah/blah
 		// we identify it as copyFrom remote to local path
-		isFirstRemote = strings.Contains(firstPath, ":")
-		isLastRemote = strings.Contains(secondPath, ":")
+		isFirstRemote := strings.Contains(firstPath, ":")
+		isLastRemote := strings.Contains(secondPath, ":")
+
+		log.Println(isFirstRemote, isLastRemote)
 
 		if isFirstRemote && !isLastRemote {
 			copyRemoteToLocal()
-		} else if !isFirstTemote && isLastRemote {
+		} else if !isFirstRemote && isLastRemote {
 			copyLocalToRemote()
 		} else {
 			log.Fatalln("The tool does not support remote to remote copy")

@@ -23,7 +23,9 @@ var s3prefefinedStorageClass = []string{
 }
 
 var s3predefinedPermissions = []string{"private", "public-read", "public-read-write", "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"}
-var s3predefinedRegions = []string{"us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "sa-east-1"}
+
+// S3Regions is list of s3 regions
+var S3Regions = []string{"us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "sa-east-1"}
 
 // S3Region global default region
 var S3Region string
@@ -53,7 +55,7 @@ func UploadS3(localSource string, remoteTarget string, permissionName string, st
 	S3Region = region
 
 	// check for region
-	if !StringInSlice(region, s3predefinedRegions) {
+	if !StringInSlice(region, S3Regions) {
 		log.Fatalln("Error: Invalid Region Name")
 	}
 
@@ -63,24 +65,11 @@ func UploadS3(localSource string, remoteTarget string, permissionName string, st
 
 	// walk the files
 	walker := make(FileWalk)
-	go func() {
-		// Gather the files to upload by walking the path recursively.
-		if err := filepath.Walk(localSource, walker.Walk); err != nil {
-			log.Fatalln("Error: ", fmt.Sprintf("%v", err))
-		}
-		close(walker)
-	}()
-
-	// For each file found on the recursive
-	for path := range walker {
-		rel, err := filepath.Rel(localSource, path)
-		if err != nil {
-			log.Fatalln("Unable to get relative path:", path, err)
-		}
+	walker.IterateUpload(localSource, func(path, rel string) error {
 		file, err := os.Open(path)
 		if err != nil {
 			log.Println("Failed opening file", path, err)
-			continue
+			return nil
 		}
 		defer file.Close()
 
@@ -105,7 +94,9 @@ func UploadS3(localSource string, remoteTarget string, permissionName string, st
 			log.Fatalln("Failed to upload", path, err)
 		}
 		fmt.Println("    Uploaded: ", result.Location)
-	}
+
+		return nil
+	})
 
 	return nil
 }
@@ -153,7 +144,7 @@ func DownloadS3(remoteSource string, localTarget string) error {
 	}
 
 	// check for region
-	if !StringInSlice(region, s3predefinedRegions) {
+	if !StringInSlice(region, S3Regions) {
 		log.Fatalln("Invalid Region Name " + region)
 	}
 	S3Region = region
