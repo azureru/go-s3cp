@@ -6,6 +6,14 @@ The reason this exists is to have no-dependency binary that can easily copy-past
 
 An UPX-ed golang binary should be small enough for the purpose (I add upx and gox to the build process)
 
+UPX files compared to non-UPX files (19 megs in size)
+```
+ 19M Mar 21 01:38 goccp
+ 5.5M Mar 21 01:40 goccp_darwin_amd64
+ 5.5M Mar 21 01:40 goccp_linux_amd64
+ 5.0M Mar 21 01:40 goccp_linux_arm
+```
+
 ## AWS Credentials
 The credential will use Amazon SDK style of storing credential (use aws on your home, on your ENV var, or on your EC2 binded role - if you run it on EC2) - More info here `https://github.com/aws/aws-sdk-go/wiki/Getting-Started-Credentials`
 
@@ -13,6 +21,7 @@ The credential will use Amazon SDK style of storing credential (use aws on your 
 This also will use Google SDK style of credentials - more info here
 `https://cloud.google.com/docs/authentication/production`
 
+## Usage
 ```
     # upload
     goccp ./file.txt s3:us-east-1:bucketname:/file.txt
