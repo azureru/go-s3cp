@@ -13,8 +13,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/azureru/go-s3cp/utils"
 )
+
+var s3prefefinedStorageClass = []string{
+	"STANDARD",
+	"STANDARD_IA",
+	"GLACIER",
+	"REDUCED_REDUNDANCY",
+}
 
 var s3predefinedPermissions = []string{"private", "public-read", "public-read-write", "authenticated-read", "bucket-owner-read", "bucket-owner-full-control"}
 var s3predefinedRegions = []string{"us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "sa-east-1"}
@@ -47,7 +53,7 @@ func UploadS3(localSource string, remoteTarget string, permissionName string, st
 	S3Region = region
 
 	// check for region
-	if !utils.StringInSlice(region, s3predefinedRegions) {
+	if !StringInSlice(region, s3predefinedRegions) {
 		log.Fatalln("Error: Invalid Region Name")
 	}
 
@@ -147,7 +153,7 @@ func DownloadS3(remoteSource string, localTarget string) error {
 	}
 
 	// check for region
-	if !utils.StringInSlice(region, s3predefinedRegions) {
+	if !StringInSlice(region, s3predefinedRegions) {
 		log.Fatalln("Invalid Region Name " + region)
 	}
 	S3Region = region
