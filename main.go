@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -18,32 +19,14 @@ var (
 	region   string
 	bucket   string
 	destPath string
-
-	// storage class to be used (default STANDARD)
-	storageClass string
-
-	// the permission of the uploaded file (default authenticated-read)
-	permissionName string
-
-	// true when source is a folder (so we need to walk on it, false when not)
-	isSourceIsFolder bool
-
-	// true when target is a folder (end with / e.g. south:bucket:/root/one/wise/, false when not - will be assumed as filename)
-	isTargetIsFolder bool
-
-	// by default all uploaded file will be `private` you need to specify public flag
-	isPublic bool
-
-	// verbose mode
-	isVerbose bool
 )
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "go-s3cp"
+	app.Name = "goccp"
 	app.Author = "Erwin Saputra"
-	app.Version = "0.0.1"
-	app.Usage = "Copy files from local to s3"
+	app.Version = "0.0.2"
+	app.Usage = "Utility to copy files from/to s3 and GCS"
 
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -94,40 +77,50 @@ func main() {
 		if len(args) < 2 {
 			fmt.Println("You need to put [from] and [to] path.")
 			fmt.Println("EXAMPLE:")
-			fmt.Println("   go-s3cp ./file regionname:bucket:path/path/filename")
-			fmt.Println("   go-s3cp ./file/ \"regionname:bucket:path/path with spaces/filename/\"")
+			fmt.Println("   goccp ./file regionname:bucket:path/path/filename")
+			fmt.Println("   goccp ./file gs://bucket/path/filename")
 			return
 		}
 		firstPath = args[0]
 		secondPath = args[1]
 
 		// storage class
-		storageClass = "STANDARD"
+		utils.GlobalParamArg.StorageClass = "STANDARD"
 		if c.String("storage") != "" {
-			storageClass = c.String("storage")
+			utils.GlobalParamArg.StorageClass = c.String("storage")
 		}
-		fmt.Println("Storage Class: " + storageClass)
+		fmt.Println("Storage Class: " + utils.GlobalParamArg.StorageClass)
 
-		isVerbose = c.Bool("verbose")
+		// verbosity
+		utils.GlobalParamArg.IsVerbose = c.Bool("verbose")
 
 		// permission
-		permissionName = "private"
+		utils.GlobalParamArg.PermissionName = "private"
 		if c.String("permission") != "" {
-			permissionName = c.String("permission")
+			utils.GlobalParamArg.PermissionName = c.String("permission")
 		}
-		isPublic = c.Bool("public")
-		if isPublic {
-			permissionName = "public-read"
+
+		utils.GlobalParamArg.IsPublic = c.Bool("public")
+		if utils.GlobalParamArg.IsPublic {
+			utils.GlobalParamArg.PermissionName = "public-read"
 		}
-		// if !stringInSlice(permissionName, predefinedPermissions) {
-		// 	log.Fatalln("Invalid Permission Name " + permissionName)
-		// }
+
+		if !utils.StringInSlice(utils.GlobalParamArg.PermissionName, utils.GlobalPermissions) {
+			log.Fatalln("Invalid Permission Name " + permissionName)
+		}
 		fmt.Println("Permission: " + permissionName)
 
-		if strings.Contains(firstPath, ":") {
+		// when the first path is s3:blah:blah or gs://blah/blah
+		// we identify it as copyFrom remote to local path
+		isFirstRemote = strings.Contains(firstPath, ":")
+		isLastRemote = strings.Contains(secondPath, ":")
+
+		if isFirstRemote && !isLastRemote {
 			copyRemoteToLocal()
-		} else {
+		} else if !isFirstTemote && isLastRemote {
 			copyLocalToRemote()
+		} else {
+			log.Fatalln("The tool does not support remote to remote copy")
 		}
 	}
 
@@ -136,10 +129,22 @@ func main() {
 
 // copyRemoteToLocal copy remote file to local location
 func copyRemoteToLocal() {
-	utils.DownloadS3(firstPath, secondPath)
+	if utils.IsS3(firstPath) {
+		utils.DownloadS3(firstPath, secondPath)
+	} else if utils.IsGCS(firstPath) {
+		utils.DownloadGCS(firstPath, secondPath)
+	} else {
+		log.Fatalln("Only support s3:bucket:path or gs://bucket/path as source remote location")
+	}
 }
 
 // copyLocalToRemote copy local file(s) to remove location
 func copyLocalToRemote() {
-	utils.UploadS3(firstPath, secondPath, permissionName, storageClass)
+	if utils.IsS3(secondPath) {
+		utils.UploadS3(firstPath, secondPath, utils.GlobalParamArg.PermissionName, utils.GlobalParamArg.StorageClass)
+	} else if utils.IsGCS(secondPath) {
+		utils.UploadGCS(firstPath, secondPath, utils.GlobalParamArg.PermissionName, utils.GlobalParamArg.StorageClass)
+	} else {
+		log.Fatalln("Only support s3:bucket:path or gs://bucket/path as target remote location")
+	}
 }
