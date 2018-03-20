@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +56,7 @@ func ShortGCSExtract(source string) (string, string, error) {
 		return "", "", errors.New("Invalid GCS short-path")
 	}
 	bucket := args[0]
-	path := strings.Join(args[1:], "")
+	path := strings.Join(args[1:], "/")
 
 	return bucket, path, nil
 }
@@ -139,10 +140,23 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 // DownloadGCS to download GCS file from remote source to local file target
 func DownloadGCS(remoteSource string, localTarget string) error {
 
+	isSourceIsFolder := strings.HasSuffix(remoteSource, "/")
+	if isSourceIsFolder {
+		log.Fatalln("Remote source must be a file")
+	}
+
 	log.Println("Downloading ", remoteSource, " to ", localTarget)
-	bucket, path, err := ShortGCSExtract(remoteSource)
+	bucket, sourcePath, err := ShortGCSExtract(remoteSource)
 	if err != nil {
-		return errors.New("Invalid Bucket Path")
+		log.Fatalln("Invalid Bucket Path ", remoteSource)
+	}
+	fmt.Println(" " + bucket + " " + sourcePath)
+
+	filename := localTarget
+	isTargetIsFolder := IsDir(localTarget)
+	if isTargetIsFolder {
+		file := path.Base(sourcePath)
+		filename = localTarget + file
 	}
 
 	// if credential not defined beforehand - we use default credential (the one from ENV var)
@@ -153,20 +167,20 @@ func DownloadGCS(remoteSource string, localTarget string) error {
 
 	client, err := storage.NewClient(GCSCredentialSession)
 	if err != nil {
-		return err
+		log.Fatalln(err)
 	}
 
 	// download start!
-	rc, err := client.Bucket(bucket).Object(path).NewReader(GCSCredentialSession)
+	rc, err := client.Bucket(bucket).Object(sourcePath).NewReader(GCSCredentialSession)
 	if err != nil {
-		return err
+		log.Fatalln(err)
 	}
 	defer rc.Close()
 
 	// download successfull - store to file
-	err = WriteReaderToFile(rc, localTarget)
+	err = WriteReaderToFile(rc, filename)
 	if err != nil {
-		return err
+		log.Fatalln(err)
 	}
 
 	return nil
