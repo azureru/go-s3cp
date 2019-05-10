@@ -103,13 +103,22 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 		}
 		defer file.Close()
 
-		targetKey := remoteTarget
+		var targetKey string
 		prefix := ""
 		if isTargetIsFolder {
 			prefix = destPath
 		}
 		if isSourceIsFolder {
 			targetKey = filepath.Join(prefix, rel)
+		} else {
+			if !isTargetIsFolder {
+				targetKey = destPath
+			} else {
+				if rel == "." {
+					rel = path
+				}
+				targetKey = filepath.Join(prefix, rel)
+			}
 		}
 		fmt.Println(" ..." + path + " to " + targetKey)
 

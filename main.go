@@ -100,9 +100,6 @@ func main() {
 		// we identify it as copyFrom remote to local path
 		isFirstRemote := strings.Contains(firstPath, ":")
 		isLastRemote := strings.Contains(secondPath, ":")
-
-		log.Println(isFirstRemote, isLastRemote)
-
 		if isFirstRemote && !isLastRemote {
 			copyRemoteToLocal()
 		} else if !isFirstRemote && isLastRemote {
