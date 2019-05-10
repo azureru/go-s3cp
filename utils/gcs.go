@@ -90,7 +90,6 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 	}
 
 	bucketGcs := client.Bucket(bucket)
-	acl := normalizePermission(permissionName)
 	storageClass = normalizeStorageClass(storageClass)
 
 	// walk the files
@@ -122,10 +121,10 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 		}
 		fmt.Println(" ..." + path + " to " + targetKey)
 
-		wc := bucketGcs.Object(targetKey).NewWriter(GCSCredentialSession)
+		obj := bucketGcs.Object(targetKey)
+		wc := obj.NewWriter(GCSCredentialSession)
 		wc.CacheControl = "max-age=86400"
 		wc.StorageClass = storageClass
-		wc.ACL = acl
 		slurp, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
@@ -139,6 +138,11 @@ func UploadGCS(localSource string, remoteTarget string, permissionName string, s
 			return err
 		}
 		slurp = nil
+
+		// set the object permission
+		if err := setPermission(GCSCredentialSession, obj.ACL(), permissionName); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -225,4 +229,28 @@ func normalizePermission(pm string) []storage.ACLRule {
 
 	// default is authenticated-read
 	return []storage.ACLRule{{Entity: storage.AllAuthenticatedUsers, Role: storage.RoleReader}}
+}
+
+// normalizePermission will normalize pm string to proper ACL rule
+func setPermission(ctx context.Context, acl *storage.ACLHandle, pm string) error {
+	if pm == "" {
+		pm = "authenticated-read"
+	}
+
+	if pm == "public-read" {
+		// public-read All user can read
+		return acl.Set(ctx, storage.AllUsers, storage.RoleReader)
+	} else if pm == "public-read-write" {
+		// public-read-write all-user can write
+		return acl.Set(ctx, storage.AllUsers, storage.RoleWriter)
+	} else if pm == "authenticated-read" {
+		// auth read
+		return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleReader)
+	} else if pm == "authenticated-write" {
+		// auth write
+		return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleWriter)
+	}
+
+	// default is authenticated-read
+	return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleReader)
 }
