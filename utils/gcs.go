@@ -233,9 +233,6 @@ func normalizePermission(pm string) []storage.ACLRule {
 
 // normalizePermission will normalize pm string to proper ACL rule
 func setPermission(ctx context.Context, acl *storage.ACLHandle, pm string) error {
-	if pm == "" {
-		pm = "authenticated-read"
-	}
 
 	if pm == "public-read" {
 		// public-read All user can read
@@ -251,6 +248,6 @@ func setPermission(ctx context.Context, acl *storage.ACLHandle, pm string) error
 		return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleWriter)
 	}
 
-	// default is authenticated-read
-	return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleReader)
+	// default is no permission 
+	return nil
 }
