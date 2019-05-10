@@ -248,6 +248,6 @@ func setPermission(ctx context.Context, acl *storage.ACLHandle, pm string) error
 		return acl.Set(ctx, storage.AllAuthenticatedUsers, storage.RoleWriter)
 	}
 
-	// default is no permission 
+	// default is no permission
 	return nil
 }

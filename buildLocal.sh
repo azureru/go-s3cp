@@ -1,4 +1,4 @@
 #!/bin/bash
 
-gox -osarch="darwin/amd64"
+gox -ldflags="-s -w" -osarch="darwin/amd64"
 upx goccp_darwin_amd64
